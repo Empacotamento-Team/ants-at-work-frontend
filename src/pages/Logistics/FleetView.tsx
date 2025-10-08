@@ -1,5 +1,5 @@
 import { useState } from "react";
-import TruckForm from "@components/TruckForm";
+import TruckMultiSelect from "@components/trucks/TruckMultiSelect";
 import { TruckData } from "@schemas/truckSchema";
 import { Button } from "@components/shadcn-ui/Button";
 import { toast } from "react-toastify";
@@ -162,9 +162,10 @@ async function fetchFleetById(fleetId: string): Promise<Fleet | undefined> {
   };
 }
 
-async function handleAddTruck(data: TruckData) {
-  console.log("Adicionando caminhão:", data);
+async function handleAddTrucksToFleet(truckIds: string[]) {
+  console.log("Adicionando caminhões à frota:", truckIds);
   await new Promise((resolve) => setTimeout(resolve, 1000));
+  return truckIds;
 }
 
 export default function FleetView() {
@@ -223,15 +224,15 @@ export default function FleetView() {
   });
 
   const truckMutation = useMutation({
-    mutationKey: ["save-truck", fleetId],
-    mutationFn: handleAddTruck,
-    onSuccess: () => {
-      toast.success("Caminhão adicionado com sucesso!");
+    mutationKey: ["add-trucks-to-fleet", fleetId],
+    mutationFn: handleAddTrucksToFleet,
+    onSuccess: (truckIds) => {
+      toast.success(`${truckIds.length} caminhão(ões) adicionado(s) à frota com sucesso!`);
       setShowForm(false);
       queryClient.invalidateQueries({ queryKey: ['fleet', fleetId] });
     },
     onError: () => {
-      toast.error("Erro ao adicionar caminhão. Tente novamente.");
+      toast.error("Erro ao adicionar caminhões à frota.");
     },
   });
 
@@ -321,10 +322,10 @@ export default function FleetView() {
       
       <ViewDataTable columns={tableColumns} data={fleet.trucks || []} />
       
-      <TruckForm
-        onSubmit={truckMutation.mutate}
+      <TruckMultiSelect
         open={showForm}
-        handleOpenChange={(open) => setShowForm(open)}
+        onOpenChange={setShowForm}
+        onTrucksSelected={truckMutation.mutate}
       />
     </div>
   );
