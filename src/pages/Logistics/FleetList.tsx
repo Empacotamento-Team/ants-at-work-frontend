@@ -17,16 +17,20 @@ import {
 import { Input } from "@components/shadcn-ui/Input";
 import { FleetSchema, FleetData } from "@schemas/FleetSchema";
 import { Loader2 } from "lucide-react";
-
-// --- SIMULAÇÃO DE API E BANCO DE DADOS ---
+import PageHeader from "@components/PageHeader";
 
 interface Truck {
+  id: string;
   plate: string;
-  model: string;
-  capacity: number;
-  mileage: number;
-  lastRevision: string;
-  status: "active" | "maintenance" | "inactive";
+  maximumCapacity: number;
+  internalHeight: number;
+  internalWidth: number;
+  internalLength: number;
+  type: "BAU" | "CARRETA";
+  status: "ACTIVE" | "MAINTENANCE" | "INACTIVE";
+  currentMileage: number;
+  details: string;
+  maintenanceNote: string;
 }
 
 interface Fleet {
@@ -36,16 +40,51 @@ interface Fleet {
   trucks: Truck[];
 }
 
-// 1. MOCK CENTRALIZADO: Esta variável atuará como nosso "banco de dados" em memória.
 const MOCKED_FLEETS: Fleet[] = [
   {
     id: "fleet-1",
     name: "Frota Principal - Longa Distância",
     description: "Caminhões pesados para rotas interestaduais.",
     trucks: [
-      { plate: "ABC-1111", model: "Volvo FH 540", capacity: 25000, mileage: 150000, lastRevision: "2025-08-01", status: "active" },
-      { plate: "DEF-2222", model: "Scania R450", capacity: 27000, mileage: 120000, lastRevision: "2025-07-15", status: "maintenance" },
-      { plate: "GHI-3333", model: "Mercedes-Benz Actros", capacity: 29000, mileage: 200000, lastRevision: "2025-06-20", status: "active" },
+      { 
+        id: "truck-1", 
+        plate: "ABC-1111", 
+        maximumCapacity: 25000, 
+        internalHeight: 3.1, 
+        internalWidth: 2.6, 
+        internalLength: 14.5, 
+        type: "BAU", 
+        status: "ACTIVE", 
+        currentMileage: 150000, 
+        details: "Volvo FH 540", 
+        maintenanceNote: "Última revisão em 2025-08-01" 
+      },
+      { 
+        id: "truck-2", 
+        plate: "DEF-2222", 
+        maximumCapacity: 27000, 
+        internalHeight: 3.2, 
+        internalWidth: 2.7, 
+        internalLength: 15.0, 
+        type: "CARRETA", 
+        status: "MAINTENANCE", 
+        currentMileage: 120000, 
+        details: "Scania R450", 
+        maintenanceNote: "Última revisão em 2025-07-15" 
+      },
+      { 
+        id: "truck-3", 
+        plate: "GHI-3333", 
+        maximumCapacity: 29000, 
+        internalHeight: 3.3, 
+        internalWidth: 2.8, 
+        internalLength: 16.0, 
+        type: "BAU", 
+        status: "ACTIVE", 
+        currentMileage: 200000, 
+        details: "Mercedes-Benz Actros", 
+        maintenanceNote: "Última revisão em 2025-06-20" 
+      },
     ],
   },
   {
@@ -53,17 +92,28 @@ const MOCKED_FLEETS: Fleet[] = [
     name: "Frota Urbana - Entregas Locais",
     description: "Veículos leves para distribuição dentro da cidade.",
     trucks: [
-      { plate: "VWX-8888", model: "VW Delivery Express", capacity: 4000, mileage: 80000, lastRevision: "2025-09-01", status: "active" },
+      { 
+        id: "truck-4", 
+        plate: "VWX-8888", 
+        maximumCapacity: 4000, 
+        internalHeight: 2.5, 
+        internalWidth: 2.0, 
+        internalLength: 8.0, 
+        type: "BAU", 
+        status: "ACTIVE", 
+        currentMileage: 80000, 
+        details: "VW Delivery Express", 
+        maintenanceNote: "Última revisão em 2025-09-01" 
+      },
     ],
   },
   { id: "fleet-3", name: "Frota Refrigerada", description: "Caminhões com baú refrigerado.", trucks: [] },
 ];
 
-// 2. FUNÇÕES DA API SIMULADA
 async function fetchFleets(): Promise<Fleet[]> {
   console.log("Buscando frotas...");
-  await new Promise((resolve) => setTimeout(resolve, 800)); // Simula delay da rede
-  return JSON.parse(JSON.stringify(MOCKED_FLEETS)); // Retorna uma cópia para evitar mutações diretas
+  await new Promise((resolve) => setTimeout(resolve, 800)); 
+  return JSON.parse(JSON.stringify(MOCKED_FLEETS)); 
 }
 
 async function createFleet(data: FleetData): Promise<Fleet> {
@@ -75,7 +125,7 @@ async function createFleet(data: FleetData): Promise<Fleet> {
     description: data.description,
     trucks: [],
   };
-  MOCKED_FLEETS.push(newFleet); // Modifica o "banco de dados"
+  MOCKED_FLEETS.push(newFleet); 
   return newFleet;
 }
 
@@ -117,13 +167,12 @@ export default function FleetList() {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Gerenciamento de Frotas</h1>
-        <Button onClick={() => setShowForm(true)}>
-          Adicionar Frota
-        </Button>
-      </div>
+    <div className="container mx-auto p-8 md:p-8">
+      <PageHeader
+        title="Gerenciamento de Frotas"
+        actions={<Button onClick={() => setShowForm(true)}>Criar Frota</Button>}
+        topClass="top-11"
+      />
 
       <Dialog open={showForm} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-[425px]">
@@ -163,16 +212,27 @@ export default function FleetList() {
         <div className="space-y-6">
           {fleets?.map((fleet) => {
             const trucksQuantity = fleet.trucks.length;
-            const activeTrucks = fleet.trucks.filter((t) => t.status === "active").length;
-            const maintenanceTrucks = fleet.trucks.filter((t) => t.status === "maintenance").length;
-            const averageCapacity = trucksQuantity > 0 ? Math.round(fleet.trucks.reduce((sum, t) => sum + t.capacity, 0) / trucksQuantity) : 0;
+            const activeTrucks = fleet.trucks.filter((t) => t.status === "ACTIVE").length;
+            const maintenanceTrucks = fleet.trucks.filter((t) => t.status === "MAINTENANCE").length;
+            const averageCapacity = trucksQuantity > 0 ? Math.round(fleet.trucks.reduce((sum, t) => sum + t.maximumCapacity, 0) / trucksQuantity) : 0;
 
             return (
               <FleetCard
                 key={fleet.id}
                 fleetId={fleet.id}
                 name={fleet.name}
-                trucks={fleet.trucks}
+                trucks={fleet.trucks.map((t) => ({
+                  plate: t.plate,
+                  maximumCapacity: t.maximumCapacity,
+                  internalHeight: t.internalHeight,
+                  internalWidth: t.internalWidth,
+                  internalLength: t.internalLength,
+                  type: t.type,
+                  status: t.status,
+                  currentMileage: t.currentMileage,
+                  details: t.details,
+                  maintenanceNote: t.maintenanceNote,
+                }))}
                 trucksQuantity={trucksQuantity}
                 averageCapacity={averageCapacity}
                 activeTrucks={activeTrucks}

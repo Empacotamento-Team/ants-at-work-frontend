@@ -11,7 +11,9 @@ export default function MainLayout() {
       <AppSidebar />
       <SidebarInset>
         <main>
-          <SidebarTrigger />
+          <div className="sticky top-0 z-30 p-2 ">
+            <SidebarTrigger />
+          </div>
           <Outlet />
         </main>
       </SidebarInset>

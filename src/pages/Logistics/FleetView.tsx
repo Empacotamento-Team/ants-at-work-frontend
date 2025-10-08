@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
-import TruckForm from "@components/TruckForm";
-import { TruckData } from "@schemas/TruckSchema";
+import TruckMultiSelect from "@components/trucks/TruckMultiSelect";
+import { TruckData } from "@schemas/truckSchema";
 import { Button } from "@components/shadcn-ui/Button";
 import { toast } from "react-toastify";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,8 +14,9 @@ import {
   TooltipTrigger,
 } from "@components/shadcn-ui/Tooltip";
 import { useParams, useNavigate } from "react-router-dom";
-import { Badge } from "@components/shadcn-ui/badge";
 import FleetIndicator from "@components/trucks/FleetIndicator";
+import { Badge } from "@components/shadcn-ui/Badge";
+import PageHeader from "@components/PageHeader";
 
 interface Truck extends TruckData {
   id: string;
@@ -48,7 +49,7 @@ function calculateFleetIndicators(trucks: Truck[]): Omit<Fleet, 'id' | 'name' | 
   const activeTrucks = trucks.filter(truck => truck.status === 'active').length;
   const maintenanceTrucks = trucks.filter(truck => truck.status === 'maintenance').length;
   const averageCapacity = trucksQuantity > 0 
-    ? Math.round(trucks.reduce((sum, truck) => sum + truck.capacity, 0) / trucksQuantity)
+    ? Math.round(trucks.reduce((sum, truck) => sum + truck.maximumCapacity, 0) / trucksQuantity)
     : 0;
 
   return {
@@ -111,9 +112,45 @@ const MOCKED_FLEETS: Fleet[] = [
       activeTrucks: 0,
       maintenanceTrucks: 0,
       trucks: [
-        { id: "truck-1", plate: "ABC-1111", model: "Volvo FH 540", capacity: 25000, mileage: 150000, lastRevision: "2025-08-01", status: "active" },
-        { id: "truck-2", plate: "DEF-2222", model: "Scania R450", capacity: 27000, mileage: 120000, lastRevision: "2025-07-15", status: "maintenance" },
-        { id: "truck-3", plate: "GHI-3333", model: "Mercedes-Benz Actros", capacity: 29000, mileage: 200000, lastRevision: "2025-06-20", status: "active" },
+        { 
+          id: "truck-1", 
+          plate: "ABC-1111", 
+          maximumCapacity: 25000, 
+          internalHeight: 3.1, 
+          internalWidth: 2.6, 
+          internalLength: 14.5, 
+          type: "BAU", 
+          status: "ACTIVE", 
+          currentMileage: 150000, 
+          details: "Volvo FH 540", 
+          maintenanceNote: "Última revisão em 2025-08-01" 
+        },
+        { 
+          id: "truck-2", 
+          plate: "DEF-2222", 
+          maximumCapacity: 27000, 
+          internalHeight: 3.2, 
+          internalWidth: 2.7, 
+          internalLength: 15.0, 
+          type: "CARRETA", 
+          status: "MAINTENANCE", 
+          currentMileage: 120000, 
+          details: "Scania R450", 
+          maintenanceNote: "Última revisão em 2025-07-15" 
+        },
+        { 
+          id: "truck-3", 
+          plate: "GHI-3333", 
+          maximumCapacity: 29000, 
+          internalHeight: 3.3, 
+          internalWidth: 2.8, 
+          internalLength: 16.0, 
+          type: "BAU", 
+          status: "ACTIVE", 
+          currentMileage: 200000, 
+          details: "Mercedes-Benz Actros", 
+          maintenanceNote: "Última revisão em 2025-06-20" 
+        },
       ],
     },
     {
@@ -125,7 +162,19 @@ const MOCKED_FLEETS: Fleet[] = [
       activeTrucks: 0,
       maintenanceTrucks: 0,
       trucks: [
-        { id: "truck-4", plate: "VWX-8888", model: "VW Delivery Express", capacity: 4000, mileage: 80000, lastRevision: "2025-09-01", status: "active" },
+        { 
+          id: "truck-4", 
+          plate: "VWX-8888", 
+          maximumCapacity: 4000, 
+          internalHeight: 2.5, 
+          internalWidth: 2.0, 
+          internalLength: 8.0, 
+          type: "BAU", 
+          status: "ACTIVE", 
+          currentMileage: 80000, 
+          details: "VW Delivery Express", 
+          maintenanceNote: "Última revisão em 2025-09-01" 
+        },
       ],
     },
     { 
@@ -156,9 +205,10 @@ async function fetchFleetById(fleetId: string): Promise<Fleet | undefined> {
   };
 }
 
-async function handleAddTruck(data: TruckData) {
-  console.log("Adicionando caminhão:", data);
+async function handleAddTrucksToFleet(truckIds: string[]) {
+  console.log("Adicionando caminhões à frota:", truckIds);
   await new Promise((resolve) => setTimeout(resolve, 1000));
+  return truckIds;
 }
 
 export default function FleetView() {
@@ -176,15 +226,15 @@ export default function FleetView() {
   });
 
   const truckMutation = useMutation({
-    mutationKey: ["save-truck", fleetId],
-    mutationFn: handleAddTruck,
-    onSuccess: () => {
-      toast.success("Caminhão adicionado com sucesso!");
+    mutationKey: ["add-trucks-to-fleet", fleetId],
+    mutationFn: handleAddTrucksToFleet,
+    onSuccess: (truckIds) => {
+      toast.success(`${truckIds.length} caminhão(ões) adicionado(s) à frota com sucesso!`);
       setShowForm(false);
       queryClient.invalidateQueries({ queryKey: ['fleet', fleetId] });
     },
     onError: () => {
-      toast.error("Erro ao adicionar caminhão. Tente novamente.");
+      toast.error("Erro ao adicionar caminhões à frota.");
     },
   });
 
@@ -226,11 +276,17 @@ export default function FleetView() {
 
   return (
     <div className="p-8">
-      <Button onClick={() => navigate("/fleets")} className="mb-4">
-          <ArrowLeft className="h-4 w-4" /> Voltar para Frotas
-      </Button>
-      <h1 className="text-3xl font-bold mb-2">Frota: {fleet.name}</h1>
-      <p className="text-muted-foreground mb-6">{fleet.description}</p>
+      <div className="mb-4">
+        <Button onClick={() => navigate("/fleets")} variant="outline">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+        </Button>
+      </div>
+
+      <PageHeader
+        title={`${fleet.name}`}
+        actions={<Button onClick={() => setShowForm(true)}>Adicionar Caminhão</Button>}
+        topClass="top-11"
+      />
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <FleetIndicator cardTitle="Total de Caminhões" icon={Truck} indicatorValue={fleet.trucksQuantity}
@@ -245,16 +301,12 @@ export default function FleetView() {
           subtitle="kg por veículo"/>
       </div>
       
-      <Button onClick={() => setShowForm(true)} className="mb-4">
-        Adicionar Caminhão à Frota
-      </Button>
-
       <ViewDataTable columns={tableColumns} data={fleet.trucks || []} />
       
-      <TruckForm
-        onSubmit={truckMutation.mutate}
+      <TruckMultiSelect
         open={showForm}
-        handleOpenChange={(open) => setShowForm(open)}
+        onOpenChange={setShowForm}
+        onTrucksSelected={truckMutation.mutate}
       />
     </div>
   );

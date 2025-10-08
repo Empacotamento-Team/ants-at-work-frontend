@@ -1,4 +1,4 @@
-import { TruckData } from "@schemas/TruckSchema";
+import { TruckData } from "@schemas/truckSchema";
 import TruckCard from "./TruckCard";
 import { Separator } from "@components/shadcn-ui/Separator";
 import { useNavigate } from "react-router-dom";

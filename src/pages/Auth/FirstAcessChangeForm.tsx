@@ -1,6 +1,6 @@
 import Input from "@components/Input";
 import Loader from "@components/Loader";
-import { Button } from "@components/Button";
+import { Button } from "@components/button";
 import { toast } from "react-toastify";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Navigate, useNavigate } from "react-router-dom";
