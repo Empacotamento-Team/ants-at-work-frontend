@@ -18,6 +18,7 @@ import { Input } from "@components/shadcn-ui/Input";
 import { FleetSchema, FleetData } from "@schemas/FleetSchema";
 import { Loader2 } from "lucide-react";
 import PageHeader from "@components/PageHeader";
+import api from "@/api/axios";
 
 interface Truck {
   id: string;
@@ -36,97 +37,21 @@ interface Truck {
 interface Fleet {
   id: string;
   name: string;
-  description: string;
-  trucks: Truck[];
+  trucksQuantity: number;
+  averageCapacity: number;
+  activeTrucks: number;
+  underMaintenanceTrucks: number;
+  trucksSummary: Truck[];
 }
-
-const MOCKED_FLEETS: Fleet[] = [
-  {
-    id: "fleet-1",
-    name: "Frota Principal - Longa Distância",
-    description: "Caminhões pesados para rotas interestaduais.",
-    trucks: [
-      { 
-        id: "truck-1", 
-        plate: "ABC-1111", 
-        maximumCapacity: 25000, 
-        internalHeight: 3.1, 
-        internalWidth: 2.6, 
-        internalLength: 14.5, 
-        type: "BAU", 
-        status: "ACTIVE", 
-        currentMileage: 150000, 
-        details: "Volvo FH 540", 
-        maintenanceNote: "Última revisão em 2025-08-01" 
-      },
-      { 
-        id: "truck-2", 
-        plate: "DEF-2222", 
-        maximumCapacity: 27000, 
-        internalHeight: 3.2, 
-        internalWidth: 2.7, 
-        internalLength: 15.0, 
-        type: "CARRETA", 
-        status: "MAINTENANCE", 
-        currentMileage: 120000, 
-        details: "Scania R450", 
-        maintenanceNote: "Última revisão em 2025-07-15" 
-      },
-      { 
-        id: "truck-3", 
-        plate: "GHI-3333", 
-        maximumCapacity: 29000, 
-        internalHeight: 3.3, 
-        internalWidth: 2.8, 
-        internalLength: 16.0, 
-        type: "BAU", 
-        status: "ACTIVE", 
-        currentMileage: 200000, 
-        details: "Mercedes-Benz Actros", 
-        maintenanceNote: "Última revisão em 2025-06-20" 
-      },
-    ],
-  },
-  {
-    id: "fleet-2",
-    name: "Frota Urbana - Entregas Locais",
-    description: "Veículos leves para distribuição dentro da cidade.",
-    trucks: [
-      { 
-        id: "truck-4", 
-        plate: "VWX-8888", 
-        maximumCapacity: 4000, 
-        internalHeight: 2.5, 
-        internalWidth: 2.0, 
-        internalLength: 8.0, 
-        type: "BAU", 
-        status: "ACTIVE", 
-        currentMileage: 80000, 
-        details: "VW Delivery Express", 
-        maintenanceNote: "Última revisão em 2025-09-01" 
-      },
-    ],
-  },
-  { id: "fleet-3", name: "Frota Refrigerada", description: "Caminhões com baú refrigerado.", trucks: [] },
-];
 
 async function fetchFleets(): Promise<Fleet[]> {
-  console.log("Buscando frotas...");
-  await new Promise((resolve) => setTimeout(resolve, 800)); 
-  return JSON.parse(JSON.stringify(MOCKED_FLEETS)); 
+  const response = await api.get('/fleets');
+  return response.data;
 }
 
-async function createFleet(data: FleetData): Promise<Fleet> {
-  console.log("Salvando nova frota:", data);
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  const newFleet: Fleet = {
-    id: `fleet-${Date.now()}`,
-    name: data.name,
-    description: data.description,
-    trucks: [],
-  };
-  MOCKED_FLEETS.push(newFleet); 
-  return newFleet;
+async function createFleet(data: FleetData) {//Promise<Fleet> {
+  const response = await api.post('/fleets', {...data, trucksIds: []});
+  return response.data;
 }
 
 
@@ -189,6 +114,11 @@ export default function FleetList() {
               {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name.message}</p>}
             </div>
             <div>
+              <label htmlFor="code" className="block text-sm font-medium mb-1">Código</label>
+              <Input id="code" {...register("code")} placeholder="Ex: FRT-001" />
+              {errors.code && <p className="text-sm text-red-500 mt-1">{errors.code.message}</p>}
+            </div>
+            <div>
               <label htmlFor="description" className="block text-sm font-medium mb-1">Descrição</label>
               <Input id="description" {...register("description")} placeholder="Ex: Caminhões para entregas na região..." />
               {errors.description && <p className="text-sm text-red-500 mt-1">{errors.description.message}</p>}
@@ -211,17 +141,12 @@ export default function FleetList() {
       ) : (
         <div className="space-y-6">
           {fleets?.map((fleet) => {
-            const trucksQuantity = fleet.trucks.length;
-            const activeTrucks = fleet.trucks.filter((t) => t.status === "ACTIVE").length;
-            const maintenanceTrucks = fleet.trucks.filter((t) => t.status === "MAINTENANCE").length;
-            const averageCapacity = trucksQuantity > 0 ? Math.round(fleet.trucks.reduce((sum, t) => sum + t.maximumCapacity, 0) / trucksQuantity) : 0;
-
             return (
               <FleetCard
                 key={fleet.id}
                 fleetId={fleet.id}
                 name={fleet.name}
-                trucks={fleet.trucks.map((t) => ({
+                trucks={fleet.trucksSummary?.map((t) => ({
                   plate: t.plate,
                   maximumCapacity: t.maximumCapacity,
                   internalHeight: t.internalHeight,
@@ -233,10 +158,10 @@ export default function FleetList() {
                   details: t.details,
                   maintenanceNote: t.maintenanceNote,
                 }))}
-                trucksQuantity={trucksQuantity}
-                averageCapacity={averageCapacity}
-                activeTrucks={activeTrucks}
-                maintenanceTrucks={maintenanceTrucks}
+                trucksQuantity={fleet.trucksQuantity}
+                averageCapacity={fleet.averageCapacity}
+                activeTrucks={fleet.activeTrucks}
+                maintenanceTrucks={fleet.underMaintenanceTrucks}
               />
             );
           })}
