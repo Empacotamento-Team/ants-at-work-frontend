@@ -1,6 +1,6 @@
 import { useState } from "react";
 import TruckForm from "@components/TruckForm";
-import { TruckData } from "@schemas/TruckSchema";
+import { TruckData } from "@schemas/truckSchema";
 import { Button } from "@components/shadcn-ui/Button";
 import { toast } from "react-toastify";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,7 +14,7 @@ import {
   TooltipTrigger,
 } from "@components/shadcn-ui/Tooltip";
 import { useParams, useNavigate } from "react-router-dom";
-import { Badge } from "@components/shadcn-ui/badge";
+import { Badge } from "@components/shadcn-ui/Badge";
 import PageHeader from "@components/PageHeader";
 
 interface Truck extends TruckData {
@@ -48,7 +48,7 @@ function calculateFleetIndicators(trucks: Truck[]): Omit<Fleet, 'id' | 'name' | 
   const activeTrucks = trucks.filter(truck => truck.status === 'active').length;
   const maintenanceTrucks = trucks.filter(truck => truck.status === 'maintenance').length;
   const averageCapacity = trucksQuantity > 0 
-    ? Math.round(trucks.reduce((sum, truck) => sum + truck.capacity, 0) / trucksQuantity)
+    ? Math.round(trucks.reduce((sum, truck) => sum + truck.maximumCapacity, 0) / trucksQuantity)
     : 0;
 
   return {
@@ -69,9 +69,45 @@ const MOCKED_FLEETS: Fleet[] = [
       activeTrucks: 0,
       maintenanceTrucks: 0,
       trucks: [
-        { id: "truck-1", plate: "ABC-1111", model: "Volvo FH 540", capacity: 25000, mileage: 150000, lastRevision: "2025-08-01", status: "active" },
-        { id: "truck-2", plate: "DEF-2222", model: "Scania R450", capacity: 27000, mileage: 120000, lastRevision: "2025-07-15", status: "maintenance" },
-        { id: "truck-3", plate: "GHI-3333", model: "Mercedes-Benz Actros", capacity: 29000, mileage: 200000, lastRevision: "2025-06-20", status: "active" },
+        { 
+          id: "truck-1", 
+          plate: "ABC-1111", 
+          maximumCapacity: 25000, 
+          internalHeight: 3.1, 
+          internalWidth: 2.6, 
+          internalLength: 14.5, 
+          type: "BAU", 
+          status: "ACTIVE", 
+          currentMileage: 150000, 
+          details: "Volvo FH 540", 
+          maintenanceNote: "Última revisão em 2025-08-01" 
+        },
+        { 
+          id: "truck-2", 
+          plate: "DEF-2222", 
+          maximumCapacity: 27000, 
+          internalHeight: 3.2, 
+          internalWidth: 2.7, 
+          internalLength: 15.0, 
+          type: "CARRETA", 
+          status: "MAINTENANCE", 
+          currentMileage: 120000, 
+          details: "Scania R450", 
+          maintenanceNote: "Última revisão em 2025-07-15" 
+        },
+        { 
+          id: "truck-3", 
+          plate: "GHI-3333", 
+          maximumCapacity: 29000, 
+          internalHeight: 3.3, 
+          internalWidth: 2.8, 
+          internalLength: 16.0, 
+          type: "BAU", 
+          status: "ACTIVE", 
+          currentMileage: 200000, 
+          details: "Mercedes-Benz Actros", 
+          maintenanceNote: "Última revisão em 2025-06-20" 
+        },
       ],
     },
     {
@@ -83,7 +119,19 @@ const MOCKED_FLEETS: Fleet[] = [
       activeTrucks: 0,
       maintenanceTrucks: 0,
       trucks: [
-        { id: "truck-4", plate: "VWX-8888", model: "VW Delivery Express", capacity: 4000, mileage: 80000, lastRevision: "2025-09-01", status: "active" },
+        { 
+          id: "truck-4", 
+          plate: "VWX-8888", 
+          maximumCapacity: 4000, 
+          internalHeight: 2.5, 
+          internalWidth: 2.0, 
+          internalLength: 8.0, 
+          type: "BAU", 
+          status: "ACTIVE", 
+          currentMileage: 80000, 
+          details: "VW Delivery Express", 
+          maintenanceNote: "Última revisão em 2025-09-01" 
+        },
       ],
     },
     { 
@@ -127,10 +175,10 @@ export default function FleetView() {
 
   const tableColumns: ColumnDef<Truck>[] = [
     { accessorKey: "plate", header: "Placa" },
-    { accessorKey: "model", header: "Modelo" },
-    { accessorKey: "capacity", header: "Capacidade (kg)", cell: ({ row }) => `${row.original.capacity.toLocaleString('pt-BR')} kg` },
-    { accessorKey: "mileage", header: "Quilometragem", cell: ({ row }) => `${row.original.mileage.toLocaleString('pt-BR')} km` },
-    { accessorKey: "lastRevision", header: "Última Revisão", cell: ({ row }) => new Date(row.original.lastRevision).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) },
+    { accessorKey: "details", header: "Modelo" },
+    { accessorKey: "maximumCapacity", header: "Capacidade (kg)", cell: ({ row }) => `${row.original.maximumCapacity.toLocaleString('pt-BR')} kg` },
+    { accessorKey: "currentMileage", header: "Quilometragem", cell: ({ row }) => `${row.original.currentMileage.toLocaleString('pt-BR')} km` },
+    { accessorKey: "maintenanceNote", header: "Última Revisão", cell: ({ row }) => row.original.maintenanceNote || "N/A" },
     {
       accessorKey: "status",
       header: "Status",
