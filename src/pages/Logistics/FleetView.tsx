@@ -131,10 +131,11 @@ export default function FleetView() {
   const truckMutation = useMutation({
     mutationKey: ["add-trucks-to-fleet", fleetId],
     mutationFn: (trucksIds: string[]) => handleAddTrucksToFleet(fleetId!, trucksIds),
-    onSuccess: (truckIds) => {
-      toast.success(`${truckIds.length} caminhão(ões) adicionado(s) à frota com sucesso!`);
+    onSuccess: () => {
+      toast.success(`Caminhão(ões) adicionado(s) à frota com sucesso!`);
       setShowForm(false);
       queryClient.invalidateQueries({ queryKey: ['fleet', fleetId] });
+      queryClient.invalidateQueries({ queryKey: ['fleet-trucks', fleetId, filtering] })
     },
     onError: () => {
       toast.error("Erro ao adicionar caminhões à frota.");
@@ -146,12 +147,19 @@ export default function FleetView() {
     mutationFn: (truckId: string) => handleRemoveTruckFromFleet(fleetId!, truckId),
     onSuccess: () => {
       toast.success("Caminhão removido com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ['fleet'] });
+      queryClient.invalidateQueries({ queryKey: ['fleet', fleetId] });
+      queryClient.invalidateQueries({ queryKey: ['fleet-trucks', fleetId, filtering] })
     },
     onError: () => {
       toast.error("Erro ao remover caminhão da frota. Tente novamente.");
     },
   });
+
+  const handleRemove = useCallback((id: string) => {
+    if (window.confirm("Tem certeza que deseja excluir este caminhão?")) {
+      removeFromFleetMutation.mutate(id);
+    }
+  }, [removeFromFleetMutation]);
 
   const handleFilterChange = useCallback((filterMode: 'active' | 'maintenance') => {
     if (filtering === filterMode) {
@@ -189,7 +197,7 @@ export default function FleetView() {
 
   const tableColumns = createTableColumns(
     (truck) => console.log("Editando " + truck.id),
-    (id) => removeFromFleetMutation.mutate(id)
+    (id) => handleRemove(id)
   );
 
   return (
