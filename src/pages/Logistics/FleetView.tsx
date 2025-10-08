@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import TruckForm from "@components/TruckForm";
 import { TruckData } from "@schemas/TruckSchema";
 import { Button } from "@components/shadcn-ui/Button";
@@ -15,6 +15,7 @@ import {
 } from "@components/shadcn-ui/Tooltip";
 import { useParams, useNavigate } from "react-router-dom";
 import { Badge } from "@components/shadcn-ui/badge";
+import FleetIndicator from "@components/trucks/FleetIndicator";
 
 interface Truck extends TruckData {
   id: string;
@@ -57,6 +58,48 @@ function calculateFleetIndicators(trucks: Truck[]): Omit<Fleet, 'id' | 'name' | 
     averageCapacity,
   };
 }
+
+const tableColumns: ColumnDef<Truck>[] = [
+  { accessorKey: "plate", header: "Placa" },
+  { accessorKey: "model", header: "Modelo" },
+  { accessorKey: "capacity", header: "Capacidade (kg)", cell: ({ row }) => `${row.original.capacity.toLocaleString('pt-BR')} kg` },
+  { accessorKey: "mileage", header: "Quilometragem", cell: ({ row }) => `${row.original.mileage.toLocaleString('pt-BR')} km` },
+  { accessorKey: "lastRevision", header: "Última Revisão", cell: ({ row }) => new Date(row.original.lastRevision).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => {
+        const status = row.original.status;
+        return <Badge variant={statusVariantMap[status] || 'default'}>{statusTextMap[status] || 'Desconhecido'}</Badge>;
+    }
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => {
+      const truck = row.original;
+      return (
+        <div className="flex gap-2 justify-end">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" className="cursor-pointer" onClick={() => console.log("Editando " + truck.id)}>
+                <Pencil className="h-4 w-4"/>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Editar caminhão</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="destructive" size="icon" className="cursor-pointer">
+                <Trash className="h-4 w-4"/>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Excluir caminhão</TooltipContent>
+          </Tooltip>
+        </div>
+      );
+    },
+  },
+];
 
 const MOCKED_FLEETS: Fleet[] = [
     {
@@ -120,51 +163,10 @@ async function handleAddTruck(data: TruckData) {
 
 export default function FleetView() {
   const [showForm, setShowForm] = useState(false);
+  const [filtering, setFiltering] = useState<'all' | 'active' | 'maintenance'>('all');
   const { fleetId } = useParams<{ fleetId: string }>(); 
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
-
-  const tableColumns: ColumnDef<Truck>[] = [
-    { accessorKey: "plate", header: "Placa" },
-    { accessorKey: "model", header: "Modelo" },
-    { accessorKey: "capacity", header: "Capacidade (kg)", cell: ({ row }) => `${row.original.capacity.toLocaleString('pt-BR')} kg` },
-    { accessorKey: "mileage", header: "Quilometragem", cell: ({ row }) => `${row.original.mileage.toLocaleString('pt-BR')} km` },
-    { accessorKey: "lastRevision", header: "Última Revisão", cell: ({ row }) => new Date(row.original.lastRevision).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => {
-          const status = row.original.status;
-          return <Badge variant={statusVariantMap[status] || 'default'}>{statusTextMap[status] || 'Desconhecido'}</Badge>;
-      }
-    },
-    {
-      id: "actions",
-      cell: ({ row }) => {
-        const truck = row.original;
-        return (
-          <div className="flex gap-2 justify-end">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" className="cursor-pointer" onClick={() => console.log("Editando " + truck.id)}>
-                  <Pencil className="h-4 w-4"/>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Editar caminhão</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="destructive" size="icon" className="cursor-pointer">
-                  <Trash className="h-4 w-4"/>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Excluir caminhão</TooltipContent>
-            </Tooltip>
-          </div>
-        );
-      },
-    },
-  ];
+  const navigate = useNavigate();
 
   const { data: fleet, isPending: isLoading, isError } = useQuery<Fleet | undefined>({
     queryKey: ["fleet", fleetId], 
@@ -185,6 +187,14 @@ export default function FleetView() {
       toast.error("Erro ao adicionar caminhão. Tente novamente.");
     },
   });
+
+  const handleFilterChange = useCallback((filterMode: 'active' | 'maintenance') => {
+    if (filtering === filterMode) {
+      setFiltering('all');
+      return;
+    }
+    setFiltering(filterMode);
+  }, [filtering]);
 
   if (isLoading) {
     return (
@@ -223,45 +233,16 @@ export default function FleetView() {
       <p className="text-muted-foreground mb-6">{fleet.description}</p>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Total de Caminhões</h3>
-            <Truck className="h-4 w-4 text-gray-400" />
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{fleet.trucksQuantity}</div>
-          <p className="text-xs text-gray-500">veículos na frota</p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Caminhões Ativos</h3>
-            <Activity className="h-4 w-4 text-green-600" />
-          </div>
-          <div className="text-2xl font-bold text-green-600">{fleet.activeTrucks}</div>
-          <p className="text-xs text-gray-500">
-            {fleet.trucksQuantity > 0 ? `${Math.round((fleet.activeTrucks / fleet.trucksQuantity) * 100)}% da frota` : '0% da frota'}
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Em Manutenção</h3>
-            <Wrench className="h-4 w-4 text-yellow-600" />
-          </div>
-          <div className="text-2xl font-bold text-yellow-600">{fleet.maintenanceTrucks}</div>
-          <p className="text-xs text-gray-500">
-            {inactiveTrucks > 0 && `${inactiveTrucks} inativos`}
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Capacidade Média</h3>
-            <Gauge className="h-4 w-4 text-gray-400" />
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{fleet.averageCapacity.toLocaleString('pt-BR')}</div>
-          <p className="text-xs text-gray-500">kg por veículo</p>
-        </div>
+        <FleetIndicator cardTitle="Total de Caminhões" icon={Truck} indicatorValue={fleet.trucksQuantity}
+          subtitle="veículos na frota"/>
+        <FleetIndicator cardTitle="Caminhões Ativos" icon={Activity} indicatorValue={fleet.activeTrucks} specialColor="var(--color-green-600)" 
+          subtitle={fleet.trucksQuantity > 0 ? `${Math.round((fleet.activeTrucks / fleet.trucksQuantity) * 100)}% da frota` : '0% da frota'}
+          onClick={() => handleFilterChange('active')} active={filtering === 'active'}/>
+        <FleetIndicator cardTitle="Em Manutenção" icon={Wrench} indicatorValue={fleet.maintenanceTrucks} specialColor="var(--color-yellow-600)" 
+          subtitle={inactiveTrucks > 0 ? `${inactiveTrucks} inativos` : ''}
+          onClick={() => handleFilterChange('maintenance')} active={filtering === 'maintenance'}/>
+        <FleetIndicator cardTitle="Capacidade Média" icon={Gauge} indicatorValue={fleet.averageCapacity.toLocaleString('pt-BR')} 
+          subtitle="kg por veículo"/>
       </div>
       
       <Button onClick={() => setShowForm(true)} className="mb-4">
