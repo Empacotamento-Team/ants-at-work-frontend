@@ -1,43 +1,44 @@
 import { useEffect, useState } from "react";
-import api from "../api/axios";
-import Loader from "../components/loader";
-import { toast } from "react-toastify";
-import { Navigate } from "react-router";
+import api from "src/api/axios";
+import Loader from "@components/Loader";
+import { Navigate, useNavigate } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 
 interface Props {
   children: React.ReactNode;
 }
 
+interface UserResponse {
+  roles: string[];
+}
+
+async function fetchUser(): Promise<UserResponse> {
+  const res = await api.get("/users/me");
+  return res.data;
+}
+
 export default function ManagerRoute({ children }: Props) {
-  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
   const [isManager, setIsManager] = useState(false);
+  const { data, isPending, isError } = useQuery<UserResponse, Error>({
+    queryKey: ["user-me"],
+    queryFn: fetchUser,
+  });
 
-  const token = localStorage.getItem("accessToken");
+  useEffect(() => {
+    if (data) {
+      if (!data.roles.includes("Administrador") && !data.roles.includes("Gestor")) {
+        navigate("/login");
+      }
+      setIsManager(true);
+    }
+  }, [data])
 
-  if (!token) {
+  if (isError) {
     return <Navigate to="/login" replace />;
   }
 
-  useEffect(() => {
-    async function fetchUser() {
-      try {
-        const res = await api.get("/users/me");
-        if (res.data.roles && res.data.roles.includes("Gestor") || res.data.roles.inclues("Administrador")) {
-          setIsManager(true);
-        } else {
-          window.location.href = "/login"; 
-        }
-      } catch (err) {
-        toast.error("Erro ao carregar dados do usuário");
-        window.location.href = "/login";
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchUser();
-  }, []);
-
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Loader />

@@ -1,14 +1,18 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import { getCookie, setCookie } from "src/lib/utils";
 
 const api = axios.create({
-  baseURL: "http://localhost:8080",
+  baseURL: import.meta.env.VITE_BACKEND_URL || "http://localhost:8080",
 });
 
 let isRefreshing = false;
-let failedList: { resolve: (token: string) => void; reject: (err: AxiosError) => void }[] = [];
+let failedList: {
+  resolve: (token: string) => void;
+  reject: (err: AxiosError) => void;
+}[] = [];
 
 const processList = (error: AxiosError | null, token: string | null) => {
-  failedList.forEach(res => {
+  failedList.forEach((res) => {
     if (error) {
       res.reject(error);
     } else {
@@ -18,8 +22,20 @@ const processList = (error: AxiosError | null, token: string | null) => {
   failedList = [];
 };
 
+const resolveError = (error: AxiosError) => {
+  processList(error, null);
+  setCookie("accessToken", "", -1);
+  setCookie("refreshToken", "", -1);
+  setCookie("passwordChangeRequired", "", -1);
+  delete api.defaults.headers.common["Authorization"];
+
+  if (window.location.pathname !== "/login")
+    window.location.href = "/login";
+  return Promise.reject(error);
+}
+
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = localStorage.getItem("accessToken");
+  const token = getCookie("accessToken");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -27,9 +43,11 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 });
 
 api.interceptors.response.use(
-  response => response,
+  (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as any;
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
@@ -45,23 +63,25 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = localStorage.getItem("refreshToken");
+        const refreshToken = getCookie("refreshToken");
+        if (!refreshToken) {
+          return resolveError(error);
+        }
+        
+        setCookie("accessToken", "", -1);
         const res = await api.post("/auth/refresh", { refreshToken });
-
         const newToken = res.data.accessToken;
-        localStorage.setItem("accessToken", newToken);
+        setCookie("accessToken", newToken, 2);
+
         api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
         processList(null, newToken);
 
         return api(originalRequest);
-      } catch (err) {
-        processList(err as AxiosError, null);
-        localStorage.clear();
-        delete api.defaults.headers.common["Authorization"];
-        window.location.href = "/login";
-        return Promise.reject(err);
+      } catch (err: unknown) {
+        return resolveError(err as AxiosError);
       } finally {
         isRefreshing = false;
+        console.log("stopped")
       }
     }
 

@@ -26,6 +26,16 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       ...pluginQuery.configs.recommended.rules,
+      "@typescript-eslint/no-explicit-any": "warn",
     },
+    settings: {
+      'import/resolver': {
+        typescript: {
+          alwaysTryTypes: true,
+          bun: true,
+          project: './tsconfig.json',
+        },
+      },
+    }
   },
 )

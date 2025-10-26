@@ -9,7 +9,7 @@ type InputProps = {
   error?: string;
 };
 
-export default function Input({ text, type, id, placeholder, register, error }: InputProps) {
+export default function FormInput({ text, type, id, placeholder, register, error }: InputProps) {
   return (
     <div className="relative w-full  group mt-2">
       <label className="absolute left-5 top-2 text-xs text-[#3F2323] font-semibold pointer-events-none">
