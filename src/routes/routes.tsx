@@ -14,6 +14,8 @@ import MainLayout from "@/layouts/MainLayout";
 import FleetList from "@/pages/Logistics/FleetList";
 import FleetView from "@/pages/Logistics/FleetView";
 import About from "@/pages/About";
+import Family from "@/pages/Logistics/TruckFamilyView";
+import TruckFamilyList from "@/pages/Logistics/TruckFamilyList";
 
 export const router = createBrowserRouter([
   {
@@ -56,6 +58,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <FleetView />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: "/family",
+        element: (
+          <ProtectedRoute>
+            <TruckFamilyList/>
           </ProtectedRoute>
         )
       }
