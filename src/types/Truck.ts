@@ -1,5 +1,4 @@
 export interface Truck {
-  id: string;
   plate: string;
   maximumCapacity: number;
   internalHeight: number;
