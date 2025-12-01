@@ -27,3 +27,11 @@ export function getCookie(cname: string) {
   }
   return null;
 }
+
+export function hasActiveFilters(filters: Record<string, any>): boolean {
+  return Object.values(filters).some(v => v && v.toString().trim() !== "");
+}
+
+export function getFilterIconClassName(filters: Record<string, any>): string {
+  return hasActiveFilters(filters) ? "fill-[#4C2D2D] text-[#4C2D2D]" : "";
+}

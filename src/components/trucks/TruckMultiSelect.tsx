@@ -36,19 +36,19 @@ export default function TruckMultiSelect({
   const [selectedTrucks, setSelectedTrucks] = useState<string[]>([]);
   const [searchValue, setSearchValue] = useState("");
 
-  const { data: allTrucks, isLoading } = useQuery<Truck[]>({
-    queryKey: ["trucks"],
+  const { data: trucksData, isLoading } = useQuery<{ trucks: Truck[]; total: number; totalPages: number; currentPage: number; hasNext: boolean; hasPrevious: boolean }>({
+    queryKey: ["trucks", "all"],
     queryFn: async () => {
       try {
-        return await trucksApi.getAll();
+        const result = await trucksApi.getAll(0, 1000);
+        return result;
       } catch (error) {
-        console.error("Error fetching trucks:", error);
-        return [];
+        return { trucks: [], total: 0, totalPages: 0, currentPage: 0, hasNext: false, hasPrevious: false };
       }
     },
   });
 
-  const availableTrucks = allTrucks || [];
+  const availableTrucks = trucksData?.trucks || [];
 
   const filteredTrucks = availableTrucks.filter(
     (truck) =>

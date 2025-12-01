@@ -8,6 +8,8 @@ import { Button } from "./button";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogHeader, DialogContent, DialogTitle, DialogFooter, DialogDescription } from "@components/shadcn-ui/Dialog";
 import { trucksApi } from "@/api/trucks";
+import { truckModelsApi } from "@/api/truckModels";
+import { TruckModel } from "@/types/TruckModel";
 
 type Props = {
   open: boolean;
@@ -25,9 +27,66 @@ async function fetchTruckTypes() {
       return type;
     });
   } catch (err) {
-    console.error("Falha ao buscar tipos de caminhão:", err);
     return ["Baú", "Carreta"];
   }
+}
+
+async function fetchTruckModels(): Promise<TruckModel[]> {
+  try {
+    const result = await truckModelsApi.getAll(0, 1000);
+    return result.models || [];
+  } catch {
+    return [];
+  }
+}
+
+function mapStatusToFormValue(status: string): string {
+  const statusMap: { [key: string]: string } = {
+    "AVAILABLE": "active",
+    "UNDER_MAINTENANCE": "maintenance",
+    "UNAVAILABLE": "inactive",
+    "Ativo": "active",
+    "Em Manutenção": "maintenance",
+    "Inativo": "inactive",
+    "Em Manutencao": "maintenance",
+    "Manutenção": "maintenance",
+    "Manutencao": "maintenance",
+    "ativo": "active",
+    "inativo": "inactive",
+    "ATIVO": "active",
+    "INATIVO": "inactive",
+    "EM MANUTENÇÃO": "maintenance",
+    "EM MANUTENCAO": "maintenance",
+    "MANUTENÇÃO": "maintenance",
+    "MANUTENCAO": "maintenance",
+    "ACTIVE": "active",
+    "MAINTENANCE": "maintenance",
+    "INACTIVE": "inactive",
+  };
+
+  const originalStatus = String(status || "").trim();
+  const normalizedStatus = originalStatus.toUpperCase();
+  const normalizedWithoutAccents = normalizedStatus
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  
+  let mappedStatus = statusMap[originalStatus] 
+    || statusMap[normalizedStatus] 
+    || statusMap[normalizedWithoutAccents] 
+    || "";
+  
+  if (!mappedStatus) {
+    const searchStatus = normalizedWithoutAccents;
+    if (searchStatus.includes("INATIVO") || searchStatus.includes("UNAVAILABLE")) {
+      mappedStatus = "inactive";
+    } else if (searchStatus.includes("MANUTEN") || searchStatus.includes("UNDER_MAINTENANCE")) {
+      mappedStatus = "maintenance";
+    } else if (searchStatus.includes("ATIVO") || searchStatus.includes("AVAILABLE")) {
+      mappedStatus = "active";
+    }
+  }
+
+  return mappedStatus;
 }
 
 export default function TruckForm({ open, onSubmit, handleOpenChange, editingTruck }: Props) {
@@ -38,22 +97,14 @@ export default function TruckForm({ open, onSubmit, handleOpenChange, editingTru
     handleSubmit,
     trigger,
     reset,
+    setValue,
+    watch,
+    getValues,
     formState: { errors },
   } = useForm<TruckData>({
     resolver: zodResolver(truckSchema),
     mode: "onBlur",
-    defaultValues: editingTruck ? {
-      plate: editingTruck.plate,
-      maximumCapacity: editingTruck.maximumCapacity,
-      internalHeight: editingTruck.internalHeight,
-      internalWidth: editingTruck.internalWidth,
-      internalLength: editingTruck.internalLength,
-      type: editingTruck.type,
-      status: editingTruck.status,
-      currentMileage: editingTruck.currentMileage,
-      details: editingTruck.details,
-      maintenanceNote: editingTruck.maintenanceNote,
-    } : undefined,
+    defaultValues: undefined,
   });
 
   const { data: truckTypes } = useQuery<string[]>({
@@ -62,24 +113,120 @@ export default function TruckForm({ open, onSubmit, handleOpenChange, editingTru
     queryFn: fetchTruckTypes,
   });
 
+  const { data: truckModels } = useQuery<TruckModel[]>({
+    queryKey: ["truckModels"],
+    queryFn: fetchTruckModels,
+    initialData: [],
+  });
+
+  const selectedModelId = watch("modelId" as any);
+
   useEffect(() => {
-    if (editingTruck) {
-      reset({
-        plate: editingTruck.plate,
-        maximumCapacity: editingTruck.maximumCapacity,
-        internalHeight: editingTruck.internalHeight,
-        internalWidth: editingTruck.internalWidth,
-        internalLength: editingTruck.internalLength,
-        type: editingTruck.type,
-        status: editingTruck.status,
-        currentMileage: editingTruck.currentMileage,
-        details: editingTruck.details,
-        maintenanceNote: editingTruck.maintenanceNote,
-      });
+    if (open) {
+      if (editingTruck) {
+        const typeMap: { [key: string]: string } = {
+          "BAU": "Baú",
+          "CARRETA": "Carreta",
+          "Baú": "Baú",
+          "Carreta": "Carreta",
+        };
+
+        const mappedType = typeMap[editingTruck.type || ""] || editingTruck.type || "";
+        const mappedStatus = mapStatusToFormValue(editingTruck.status || "");
+
+        const modelIdValue = editingTruck.modelId || editingTruck.model?.id || undefined;
+        
+        const formData = {
+          plate: editingTruck.plate || "",
+          maximumCapacity: editingTruck.maximumCapacity ?? undefined,
+          internalHeight: editingTruck.internalHeight ?? undefined,
+          internalWidth: editingTruck.internalWidth ?? undefined,
+          internalLength: editingTruck.internalLength ?? undefined,
+          type: mappedType || "",
+          status: mappedStatus || "",
+          currentMileage: editingTruck.currentMileage ?? undefined,
+          details: editingTruck.details || "",
+          maintenanceNote: editingTruck.maintenanceNote || "",
+          modelId: modelIdValue ? String(modelIdValue) : undefined,
+        };
+        
+        reset(formData, { keepDefaultValues: false });
+      } else {
+        reset({
+          plate: "",
+          maximumCapacity: undefined,
+          internalHeight: undefined,
+          internalWidth: undefined,
+          internalLength: undefined,
+          type: "",
+          status: "",
+          currentMileage: undefined,
+          details: "",
+          maintenanceNote: "",
+          modelId: undefined,
+        });
+      }
+      setStep(1);
     } else {
-      reset();
+      reset({
+        plate: "",
+        maximumCapacity: undefined,
+        internalHeight: undefined,
+        internalWidth: undefined,
+        internalLength: undefined,
+        type: "",
+        status: "",
+        currentMileage: undefined,
+        details: "",
+        maintenanceNote: "",
+        modelId: undefined,
+      });
+      setStep(1);
     }
-  }, [editingTruck, reset]);
+  }, [open, editingTruck, reset]);
+
+  useEffect(() => {
+    if (open && editingTruck) {
+      const mappedStatus = mapStatusToFormValue(editingTruck.status || "");
+      
+      if (mappedStatus) {
+        setValue("status", mappedStatus, { shouldValidate: false, shouldDirty: false });
+        
+        const timer = setTimeout(() => {
+          setValue("status", mappedStatus, { shouldValidate: false, shouldDirty: false });
+        }, 50);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [open, editingTruck, setValue, step]);
+
+  useEffect(() => {
+    if (selectedModelId && truckModels && truckModels.length > 0) {
+      const selectedModel = truckModels.find(model => model.id === String(selectedModelId));
+      if (selectedModel) {
+        const typeMap: { [key: string]: string } = {
+          "BAU": "Baú",
+          "CARRETA": "Carreta",
+          "Baú": "Baú",
+          "Carreta": "Carreta",
+        };
+
+        const mappedType = typeMap[selectedModel.type || ""] || selectedModel.type || "";
+
+        // Só atualiza os campos se não estiver editando, ou se estiver editando e o usuário mudou o modelo
+        if (!editingTruck || (editingTruck && selectedModelId !== (editingTruck.modelId || editingTruck.model?.id))) {
+          setValue("maximumCapacity", selectedModel.maximumCapacity);
+          setValue("internalHeight", selectedModel.internalHeight);
+          setValue("internalWidth", selectedModel.internalWidth);
+          setValue("internalLength", selectedModel.internalLength);
+          if (mappedType) {
+            setValue("type", mappedType);
+          }
+        }
+      }
+    }
+  }, [selectedModelId, truckModels, setValue, editingTruck]);
 
   const handleNextStep = async () => {
     const fieldsToValidate: (keyof TruckData)[] = [
@@ -101,17 +248,20 @@ export default function TruckForm({ open, onSubmit, handleOpenChange, editingTru
   };
 
   const handleFormSubmit = (data: TruckData) => {
-    console.log("Form submitted with data:", JSON.stringify(data, null, 2));
-    console.log("Form validation passed");
-    console.log("Form state:", { errors, isValid: Object.keys(errors).length === 0 });
-    onSubmit(data);
+    if (!data.status || data.status.trim() === "") {
+      return;
+    }
+    
+    const currentModelId = getValues("modelId");
+    const formData: TruckData = {
+      ...data,
+      modelId: currentModelId && String(currentModelId).trim() !== "" ? String(currentModelId) : undefined,
+    };
+    
+    onSubmit(formData);
   };
 
-  const handleFormError = (errors: any) => {
-    console.log("Form validation errors:", errors);
-  };
-
-  console.log("TruckForm rendered with:", { open, editingTruck, step, errors });
+  const handleFormError = () => {};
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange} >
@@ -145,6 +295,36 @@ export default function TruckForm({ open, onSubmit, handleOpenChange, editingTru
                 register={register}
                 error={errors.plate?.message}
               />
+              <div className="flex flex-col w-full mt-2">
+                <label
+                  htmlFor="modelId"
+                  className="mb-1 text-[#4C2D2D] font-medium"
+                >
+                  Modelo (opcional)
+                </label>
+                <select
+                  id="modelId"
+                  {...register("modelId")}
+                  value={watch("modelId") ? String(watch("modelId")) : ""}
+                  className="w-full p-2 rounded-lg border-2 border-[#CABAAE] bg-[#E5DAD1] text-[#3F2323] text-sm hover:border-[#4C2D2D] focus:outline-none focus:ring-2 focus:ring-[#744625] transition"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const finalValue = value === "" ? undefined : value;
+                    setValue("modelId", finalValue as any, { shouldValidate: false, shouldDirty: true, shouldTouch: true });
+                  }}
+                >
+                  <option value="">Selecione um modelo (opcional)</option>
+                  {truckModels && truckModels.length > 0 ? (
+                    truckModels.map((model) => (
+                      <option key={model.id} value={String(model.id)}>
+                        {model.name}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="" disabled>Nenhum modelo disponível</option>
+                  )}
+                </select>
+              </div>
               <Input
                 text="Capacidade Máxima (kg)"
                 id="maximumCapacity"
@@ -303,10 +483,7 @@ export default function TruckForm({ open, onSubmit, handleOpenChange, editingTru
               )}
 
               {step === 2 && (
-                <Button 
-                  type="submit"
-                  onClick={() => console.log("Submit button clicked")}
-                >
+                <Button type="submit">
                   {editingTruck ? "Atualizar" : "Salvar"}
                 </Button>
               )}

@@ -1,8 +1,25 @@
 import api from "@/api/axios";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@components/shadcn-ui/Sidebar";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem
+} from "@components/shadcn-ui/Sidebar";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronUp, FileIcon, Home, LogOut, Truck, User } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./shadcn-ui/DropdownMenu";
+import { ChevronUp, FileIcon, Home, LogOut, Truck, User, Package, Layers, Blocks } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "./shadcn-ui/DropdownMenu";
 import { setCookie } from "@/lib/utils";
 import { Link } from "react-router";
 
@@ -11,15 +28,18 @@ const menuItems = [
     groupName: "Geral",
     items: [
       { title: "Início", url: "/main", icon: Home },
-    ]
+    ],
   },
   {
     groupName: "Logística",
     items: [
       { title: "Caminhões", url: "/trucks", icon: Truck },
-      { title: "Frotas", url: "/fleets", icon: FileIcon }
-    ]
-  }
+      { title: "Modelos de Caminhão", url: "/truck-models", icon: FileIcon },
+      { title: "Frotas", url: "/fleets", icon: Blocks },
+      { title: "Produtos", url: "/products", icon: Package },
+      { title: "Famílias de Produtos", url: "/product-families", icon: Layers },
+    ],
+  },
 ];
 
 interface UserData {
@@ -44,7 +64,7 @@ export default function AppSidebar() {
   const { data, isPending } = useQuery({
     queryKey: ['user-me'],
     queryFn: fetchUserData
-  })
+  });
 
   return (
     <Sidebar variant="sidebar" collapsible="icon">
@@ -54,21 +74,22 @@ export default function AppSidebar() {
             <SidebarGroupLabel>{group.groupName}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-              {group.items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <Link to={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                {group.items.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <Link to={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
       </SidebarContent>
+
       <SidebarFooter>
         {isPending ? (
           <div>Carregando...</div>
@@ -96,8 +117,10 @@ export default function AppSidebar() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-600 hover:bg-red-600/10 focus:bg-red-600/10"
-                  onClick={handleLogout}>
+                  <DropdownMenuItem
+                    className="text-red-600 hover:bg-red-600/10 focus:bg-red-600/10"
+                    onClick={handleLogout}
+                  >
                     <LogOut className="text-red-600" />
                     <span>Sair da conta</span>
                   </DropdownMenuItem>
@@ -108,5 +131,5 @@ export default function AppSidebar() {
         )}
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

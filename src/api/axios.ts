@@ -81,7 +81,6 @@ api.interceptors.response.use(
         return resolveError(err as AxiosError);
       } finally {
         isRefreshing = false;
-        console.log("stopped")
       }
     }
 

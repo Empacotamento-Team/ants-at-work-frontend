@@ -2,8 +2,11 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
+  SortingState,
   useReactTable,
 } from "@tanstack/react-table";
+import { useState } from "react";
 
 import {
   Table,
@@ -13,20 +16,30 @@ import {
   TableHeader,
   TableRow,
 } from "@components/shadcn-ui/Table";
+import { Skeleton } from "@components/shadcn-ui/Skeleton";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  isLoading?: boolean
 }
 
 export function ViewDataTable<TData, TValue>({
   columns,
   data,
+  isLoading = false,
 }: DataTableProps<TData, TValue>) {
+  const [sorting, setSorting] = useState<SortingState>([]);
+
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    onSortingChange: setSorting,
+    state: {
+      sorting,
+    },
   })
 
   return (
@@ -51,7 +64,17 @@ export function ViewDataTable<TData, TValue>({
           ))}
         </TableHeader>
         <TableBody className="bg-[#FFFFFF]">
-          {table.getRowModel().rows?.length ? (
+          {isLoading ? (
+            Array.from({ length: 5 }).map((_, index) => (
+              <TableRow key={`skeleton-${index}`}>
+                {columns.map((_, colIndex) => (
+                  <TableCell key={`skeleton-cell-${colIndex}`}>
+                    <Skeleton className="h-4 w-full" />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          ) : table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}

@@ -1,6 +1,5 @@
 import * as z from "zod";
 
-
 const placaRegex = /^[A-Za-z]{3}[0-9][A-Za-z0-9][0-9]{2}$/;
 
 export const truckSchema = z.object({
@@ -13,9 +12,10 @@ export const truckSchema = z.object({
   internalLength: z.coerce.number().positive("O comprimento deve ser um número positivo"),
   type: z.string().min(1, "Tipo é obrigatório"),
   status: z.string().min(1, "Status é obrigatório"),
-  currentMileage: z.coerce.number().positive("A quilometragem deve ser um número positivo"),
+  currentMileage: z.coerce.number().nonnegative("A quilometragem deve ser um número positivo").optional(),
   details: z.string().optional(),
   maintenanceNote: z.string().optional(),
+  modelId: z.string().optional(),
 });
 
 export type TruckData = z.infer<typeof truckSchema>;

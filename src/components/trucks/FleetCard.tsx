@@ -27,10 +27,14 @@ export default function FleetCard({
 
   return (
     <div 
-      onClick={() => navigate(`/fleets/${fleetId}`)}
-      className="cursor-pointer">
-      <div className="mb-4">
-    <div className="min-w-100 border bg-white rounded-lg p-6 shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-primary/50 dark:bg-zinc-950 dark:border-zinc-800 dark:hover:border-primary">
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('button') || target.closest('[role="button"]')) {
+          return;
+        }
+        navigate(`/fleets/${fleetId}`);
+      }}
+      className="mb-4 min-w-100 border bg-white rounded-lg p-6 shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-primary/50 dark:bg-zinc-950 dark:border-zinc-800 dark:hover:border-primary cursor-pointer">
       <div className="mb-4">
         <h3 className="text-xl font-semibold leading-none tracking-tight">{name}</h3>
         <p className="text-sm text-muted-foreground mt-1">
@@ -62,7 +66,5 @@ export default function FleetCard({
         )} 
       </div>
     </div>
-  </div>
-  </div>
   );
 }

@@ -1,10 +1,9 @@
 import { useForm } from "react-hook-form";
 import { useState } from "react";
-import api from "../api/axios";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { truckSchema, TruckData } from "@schemas/TruckSchema";
+import { truckSchema, TruckData } from "@schemas/truckSchema";
 import Input from "./Input";
-import { Button } from "./Button";
+import { Button } from "./button";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogHeader, DialogContent, DialogTitle, DialogFooter } from "@components/shadcn-ui/Dialog";
 
@@ -16,11 +15,8 @@ type Props = {
 
 async function fetchTruckTypes() {
   try {
-    // const res = await api.get("/truck-types");
-    // return res.data;
     return ["Baú"]
   } catch (err) {
-    console.error("Falha ao buscar tipos de caminhão:", err);
     return ["Baú", "Sider", "Graneleiro", "Refrigerado"];
   }
 }
@@ -47,11 +43,10 @@ export default function TruckForm({ open, onSubmit, handleOpenChange }: Props) {
   const handleNextStep = async () => {
     const fieldsToValidate: (keyof TruckData)[] = [
       "plate",
-      "model",
-      "capacity",
-      "length",
-      "width",
-      "height",
+      "maximumCapacity",
+      "internalLength",
+      "internalWidth",
+      "internalHeight",
       "type",
     ];
     const isValid = await trigger(fieldsToValidate);
@@ -94,20 +89,12 @@ export default function TruckForm({ open, onSubmit, handleOpenChange }: Props) {
                 error={errors.plate?.message}
               />
               <Input
-                text="Modelo"
-                id="model"
-                type="text"
-                placeholder="Insira o modelo..."
-                register={register}
-                error={errors.model?.message}
-              />
-              <Input
                 text="Capacidade Máxima (kg)"
-                id="capacity"
+                id="maximumCapacity"
                 type="number"
                 placeholder="Insira a capacidade em kg..."
                 register={register}
-                error={errors.capacity?.message}
+                error={errors.maximumCapacity?.message}
               />
               <p className="text-[#4C2D2D] font-medium -mb-1">
                 Dimensões Internas
@@ -115,27 +102,27 @@ export default function TruckForm({ open, onSubmit, handleOpenChange }: Props) {
               <div className="flex gap-2">
                 <Input
                   text="Comprimento (m)"
-                  id="length"
+                  id="internalLength"
                   type="number"
                   placeholder="Ex: 14.5"
                   register={register}
-                  error={errors.length?.message}
+                  error={errors.internalLength?.message}
                 />
                 <Input
                   text="Largura (m)"
-                  id="width"
+                  id="internalWidth"
                   type="number"
                   placeholder="Ex: 2.6"
                   register={register}
-                  error={errors.width?.message}
+                  error={errors.internalWidth?.message}
                 />
                 <Input
                   text="Altura (m)"
-                  id="height"
+                  id="internalHeight"
                   type="number"
                   placeholder="Ex: 3.1"
                   register={register}
-                  error={errors.height?.message}
+                  error={errors.internalHeight?.message}
                 />
               </div>
               <div className="flex flex-col w-full mt-2">
@@ -165,21 +152,21 @@ export default function TruckForm({ open, onSubmit, handleOpenChange }: Props) {
               </div>
               <div className="flex flex-col w-full mt-2">
                 <label
-                  htmlFor="detail"
+                  htmlFor="details"
                   className="mb-1 text-[#4C2D2D] font-medium"
                 >
                   Detalhes/Sobre
                 </label>
                 <textarea
-                  id="detail"
+                  id="details"
                   placeholder="Observações adicionais sobre o caminhão..."
-                  {...register("detail")}
+                  {...register("details")}
                   className="w-full p-2 rounded-lg border-2 border-[#CABAAE] bg-[#E5DAD1] text-[#3F2323] text-sm hover:border-[#4C2D2D] focus:outline-none focus:ring-2 focus:ring-[#744625] transition"
                   rows={3}
                 />
-                {errors.detail && (
+                {errors.details && (
                   <p className="text-[#800000] text-xs mt-1 ml-1 font-medium">
-                    {errors.detail.message}
+                    {errors.details.message}
                   </p>
                 )}
               </div>
@@ -189,21 +176,56 @@ export default function TruckForm({ open, onSubmit, handleOpenChange }: Props) {
           {step === 2 && (
             <>
               <Input
-                text="Última Revisão"
-                id="lastRevision"
-                type="date"
-                placeholder=""
-                register={register}
-                error={errors.lastRevision?.message}
-              />
-              <Input
                 text="Quilometragem"
-                id="mileage"
+                id="currentMileage"
                 type="number"
                 placeholder="Insira a quilometragem atual"
                 register={register}
-                error={errors.mileage?.message}
+                error={errors.currentMileage?.message}
               />
+              <div className="flex flex-col w-full mt-2">
+                <label
+                  htmlFor="maintenanceNote"
+                  className="mb-1 text-[#4C2D2D] font-medium"
+                >
+                  Nota de Manutenção
+                </label>
+                <textarea
+                  id="maintenanceNote"
+                  placeholder="Observações sobre manutenção..."
+                  {...register("maintenanceNote")}
+                  className="w-full p-2 rounded-lg border-2 border-[#CABAAE] bg-[#E5DAD1] text-[#3F2323] text-sm hover:border-[#4C2D2D] focus:outline-none focus:ring-2 focus:ring-[#744625] transition"
+                  rows={3}
+                />
+                {errors.maintenanceNote && (
+                  <p className="text-[#800000] text-xs mt-1 ml-1 font-medium">
+                    {errors.maintenanceNote.message}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col w-full mt-2">
+                <label
+                  htmlFor="status"
+                  className="mb-1 text-[#4C2D2D] font-medium"
+                >
+                  Status
+                </label>
+                <select
+                  id="status"
+                  {...register("status")}
+                  className="w-full p-2 rounded-lg border-2 border-[#CABAAE] bg-[#E5DAD1] text-[#3F2323] text-sm hover:border-[#4C2D2D] focus:outline-none focus:ring-2 focus:ring-[#744625] transition"
+                >
+                  <option value="">Selecione o status</option>
+                  <option value="ACTIVE">Ativo</option>
+                  <option value="MAINTENANCE">Em Manutenção</option>
+                  <option value="INACTIVE">Inativo</option>
+                </select>
+                {errors.status && (
+                  <p className="text-[#800000] text-xs mt-1 ml-1 font-medium">
+                    {errors.status.message}
+                  </p>
+                )}
+              </div>
             </>
           )}
 

@@ -1,3 +1,5 @@
+import { TruckModel } from "./TruckModel";
+
 export interface Truck {
   id: string;
   plate: string;
@@ -10,4 +12,6 @@ export interface Truck {
   currentMileage: number;
   details: string;
   maintenanceNote: string;
+  model?: TruckModel | null;
+  modelId?: string | null;
 }
