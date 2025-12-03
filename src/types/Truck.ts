@@ -1,12 +1,11 @@
 import { TruckModel } from "./TruckModel";
+import { Dimensions } from "./Product";
 
 export interface Truck {
   id: string;
   plate: string;
   maximumCapacity: number;
-  internalHeight: number;
-  internalWidth: number;
-  internalLength: number;
+  internalDimensions: Dimensions; // Objeto Dimensions com height, width, length
   type: "BAU" | "CARRETA";
   status: "ACTIVE" | "MAINTENANCE" | "INACTIVE";
   currentMileage: number;

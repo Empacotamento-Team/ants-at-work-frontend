@@ -55,12 +55,18 @@ export default function ProductForm({ open, onSubmit, handleOpenChange, editingP
     queryFn: fetchProductFamilies,
     initialData: [],
     retry: 1,
+    enabled: open, // Só busca quando o modal estiver aberto
+    refetchOnMount: true, // Recarrega quando o modal abrir
   });
 
   const selectedFamilyId = watch("familyId");
 
   useEffect(() => {
     if (editingProduct) {
+      // Buscar a família do produto para obter o valor padrão
+      const productFamily = productFamilies?.find(f => f.id === editingProduct.family?.id);
+      const defaultMaxWeight = productFamily?.defaultMaxSupportedWeight;
+      
       reset({
         name: editingProduct.name || "",
         familyId: editingProduct.family?.id,
@@ -68,7 +74,8 @@ export default function ProductForm({ open, onSubmit, handleOpenChange, editingP
         width: editingProduct.dimensions?.width,
         length: editingProduct.dimensions?.length,
         weight: editingProduct.weight,
-        maxSupportedWeight: editingProduct.maxSupportedWeight,
+        // Usar o valor do produto se existir, senão usar o padrão da família
+        maxSupportedWeight: editingProduct.maxSupportedWeight || defaultMaxWeight,
         batch: editingProduct.batch || "",
         fragile: editingProduct.fragile || false,
       });
@@ -85,13 +92,26 @@ export default function ProductForm({ open, onSubmit, handleOpenChange, editingP
         fragile: false,
       });
     }
-  }, [editingProduct, reset, open]);
+  }, [editingProduct, reset, open, productFamilies]);
 
   useEffect(() => {
-    if (selectedFamilyId && productFamilies && productFamilies.length > 0 && !editingProduct) {
+    if (selectedFamilyId && productFamilies && productFamilies.length > 0) {
       const selectedFamily = productFamilies.find(family => family.id === Number(selectedFamilyId));
       if (selectedFamily && selectedFamily.defaultMaxSupportedWeight) {
-        setValue("maxSupportedWeight", selectedFamily.defaultMaxSupportedWeight);
+        // Na criação, sempre preenche com o valor padrão
+        if (!editingProduct) {
+          setValue("maxSupportedWeight", selectedFamily.defaultMaxSupportedWeight);
+        } else {
+          // Na edição, verifica se a família mudou comparando com a família original do produto
+          const originalFamilyId = editingProduct.family?.id;
+          const currentFamilyId = Number(selectedFamilyId);
+          
+          // Se a família mudou, atualiza o peso máximo suportado para o padrão da nova família
+          if (originalFamilyId !== currentFamilyId) {
+            setValue("maxSupportedWeight", selectedFamily.defaultMaxSupportedWeight);
+          }
+          // Se a família não mudou, mantém o valor atual do produto (já foi preenchido no reset)
+        }
       }
     }
   }, [selectedFamilyId, productFamilies, setValue, editingProduct]);
@@ -159,12 +179,12 @@ export default function ProductForm({ open, onSubmit, handleOpenChange, editingP
           </p>
           <div className="flex gap-2">
             <Input
-              text="Altura"
-              id="height"
+              text="Comprimento (cm)"
+              id="length"
               type="number"
-              placeholder="Ex: 20.5"
+              placeholder="Ex: 30.0"
               register={register}
-              error={errors.height?.message}
+              error={errors.length?.message}
             />
             <Input
               text="Largura"
@@ -175,12 +195,12 @@ export default function ProductForm({ open, onSubmit, handleOpenChange, editingP
               error={errors.width?.message}
             />
             <Input
-              text="Comprimento"
-              id="length"
+              text="Altura"
+              id="height"
               type="number"
-              placeholder="Ex: 30.0"
+              placeholder="Ex: 20.5"
               register={register}
-              error={errors.length?.message}
+              error={errors.height?.message}
             />
           </div>
 

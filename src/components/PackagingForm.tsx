@@ -54,6 +54,8 @@ export default function PackagingForm({ open, onOpenChange, onSubmit, editingPac
   const { data: products } = useQuery({
     queryKey: ["products"],
     queryFn: fetchProducts,
+    enabled: open, // Só busca quando o modal estiver aberto
+    refetchOnMount: true, // Recarrega quando o modal abrir
   });
 
   useEffect(() => {

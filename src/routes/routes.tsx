@@ -16,6 +16,8 @@ import FleetView from "@/pages/Logistics/FleetView";
 import ProductList from "@/pages/Logistics/ProductList";
 import ProductFamilyList from "@/pages/Logistics/ProductFamilyList";
 import TruckModelList from "@/pages/Logistics/TruckModelList";
+import PackageList from "@/pages/Logistics/PackageList";
+import Planning from "@/pages/Logistics/Planning";
 import About from "@/pages/About";
 
 export const router = createBrowserRouter([
@@ -83,6 +85,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <TruckModelList />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: "/packages",
+        element: (
+          <ProtectedRoute>
+            <PackageList />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: "/planning",
+        element: (
+          <ProtectedRoute>
+            <Planning />
           </ProtectedRoute>
         )
       }

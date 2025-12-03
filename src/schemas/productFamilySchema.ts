@@ -7,8 +7,7 @@ export const productFamilySchema = z.object({
   description: z.string()
     .min(1, { message: "A descrição é obrigatória" })
     .max(500, { message: "A descrição deve ter no máximo 500 caracteres" }),
-  defaultMaxSupportedWeight: z.coerce.number()
-    .min(0, "O peso máximo suportado por padrão não pode ser negativo"),
+  defaultMaxSupportedWeight: z.coerce.number().positive("O peso máximo suportado por padrão deve ser maior que 0"),
 });
 
 export type ProductFamilyData = z.infer<typeof productFamilySchema>;

@@ -28,13 +28,27 @@ function mapTruckResponse(truck: any): Truck {
   const model = truck.model || null;
   const modelId = model?.id || null;
   
+  let internalDimensions = { height: 0, width: 0, length: 0 };
+  
+  if (truck.internalDimensions) {
+    internalDimensions = {
+      height: Number(truck.internalDimensions.height || 0),
+      width: Number(truck.internalDimensions.width || 0),
+      length: Number(truck.internalDimensions.length || 0),
+    };
+  } else {
+    internalDimensions = {
+      height: Number(truck.internalHeight || 0),
+      width: Number(truck.internalWidth || 0),
+      length: Number(truck.internalLength || 0),
+    };
+  }
+  
   return {
     id: String(truck.id || ""),
     plate: String(truck.plate || ""),
     maximumCapacity: Number(truck.maximumCapacity || 0),
-    internalHeight: Number(truck.internalHeight || 0),
-    internalWidth: Number(truck.internalWidth || 0),
-    internalLength: Number(truck.internalLength || 0),
+    internalDimensions: internalDimensions,
     type: mapTruckType(String(truck.type || "")),
     status: mapTruckStatus(String(truck.status || "")),
     currentMileage: Number(truck.currentMileage || 0),

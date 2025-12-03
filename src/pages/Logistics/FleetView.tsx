@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@components/shadcn-ui/Skeleton";
 import { ColumnDef } from "@tanstack/react-table";
 import { ViewDataTable } from "@components/trucks/ViewDataTable";
-import { ArrowLeft, Pencil, Truck as TruckIcon, Wrench, Activity, Gauge, X, Package } from "lucide-react";
+import { ArrowLeft, Pencil, Truck as TruckIcon, Wrench, Activity, Gauge, X } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -18,10 +18,6 @@ import FleetIndicator from "@components/trucks/FleetIndicator";
 import { Badge } from "@components/shadcn-ui/Badge";
 import PageHeader from "@components/PageHeader";
 import api from "@/api/axios";
-import { Packaging } from "@/types/Packaging";
-import { productsApi } from "@/api/products";
-import { Product } from "@/types/Product";
-import PackagingForm from "@components/PackagingForm";
 import TruckForm from "@components/TruckForm";
 import { trucksApi } from "@/api/trucks";
 import { Truck } from "@/types/Truck";
@@ -251,72 +247,16 @@ async function fetchFleetTrucks(fleetId: string, page: number = 0, size: number 
   }
 }
 
-async function fetchProducts(): Promise<Product[]> {
-  try {
-    const result = await productsApi.getAll(0, 1000);
-    return result.products || [];
-  } catch {
-    return [];
-  }
-}
-
-async function fetchFleetPackagings(fleetId: string, page: number = 0, size: number = 2): Promise<{ packagings: Packaging[]; total: number; totalPages: number; currentPage: number; hasNext: boolean; hasPrevious: boolean }> {
-  try {
-    const response = await api.get(`/fleets/${fleetId}/packagings`, {
-      params: { page, size },
-    });
-    const pageData = response.data;
-    return {
-      packagings: Array.isArray(pageData.content) ? pageData.content : [],
-      total: pageData.totalElements || 0,
-      totalPages: pageData.totalPages || 0,
-      currentPage: pageData.number || 0,
-      hasNext: !pageData.last || false,
-      hasPrevious: !pageData.first || false,
-    };
-  } catch {
-    return { packagings: [], total: 0, totalPages: 0, currentPage: 0, hasNext: false, hasPrevious: false };
-  }
-}
-
-async function createPackaging(fleetId: string, data: any): Promise<Packaging> {
-  const response = await api.post(`/fleets/${fleetId}/packagings`, {
-    name: String(data.name || "").trim(),
-    description: String(data.description || "").trim(),
-    internalLength: Number(data.internalLength) || 0,
-    internalHeight: Number(data.internalHeight) || 0,
-    internalWidth: Number(data.internalWidth) || 0,
-    products: Array.isArray(data.products) 
-      ? data.products
-          .filter((p: any) => p && p.productId != null)
-          .map((p: any) => ({
-            productId: Number(p.productId),
-            quantity: Number(p.quantity) || 1,
-          }))
-      : [],
-  });
-  return response.data;
-}
-
 export default function FleetView() {
   const [showForm, setShowForm] = useState(false);
-  const [showPackagingForm, setShowPackagingForm] = useState(false);
   const [showTruckEditForm, setShowTruckEditForm] = useState(false);
   const [editingTruck, setEditingTruck] = useState<Truck | null>(null);
   const [filtering, setFiltering] = useState<'all' | 'active' | 'maintenance'>('all');
-  const [packagingRefreshKey, setPackagingRefreshKey] = useState(0);
   const [trucksCurrentPage, setTrucksCurrentPage] = useState(0);
   const [trucksPageSize, setTrucksPageSize] = useState(6);
-  const [packagingsCurrentPage, setPackagingsCurrentPage] = useState(0);
-  const [packagingsPageSize, setPackagingsPageSize] = useState(2);
   const { fleetId } = useParams<{ fleetId: string }>(); 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-
-  const { data: allProducts } = useQuery<Product[]>({
-    queryKey: ["products"],
-    queryFn: fetchProducts,
-  });
 
   const { data: fleet, isPending: isLoading, isError } = useQuery<Fleet | undefined>({
     queryKey: ["fleet", fleetId], 
@@ -388,34 +328,6 @@ export default function FleetView() {
     },
   });
 
-  const { data: packagingsData } = useQuery<{ packagings: Packaging[]; total: number; totalPages: number; currentPage: number; hasNext: boolean; hasPrevious: boolean }>({
-    queryKey: ["fleet-packagings", fleetId, packagingsCurrentPage, packagingsPageSize, packagingRefreshKey],
-    queryFn: () => fetchFleetPackagings(fleetId!, packagingsCurrentPage, packagingsPageSize),
-    enabled: !!fleetId,
-    staleTime: 0,
-    refetchOnMount: true,
-  });
-
-  const allPackagings = packagingsData?.packagings || [];
-  const packagingsTotal = packagingsData?.total || 0;
-  const packagingsTotalPages = packagingsData?.totalPages || 0;
-  const packagingsHasNext = packagingsData?.hasNext || false;
-  const packagingsHasPrevious = packagingsData?.hasPrevious || false;
-
-  const addPackagingMutation = useMutation({
-    mutationFn: ({ fleetId, data }: { fleetId: string; data: any }) => createPackaging(fleetId, data),
-    onSuccess: () => {
-      toast.success("Embalagem adicionada com sucesso!");
-      setShowPackagingForm(false);
-      setPackagingRefreshKey((prev: number) => prev + 1);
-      queryClient.invalidateQueries({ queryKey: ["fleet", fleetId] });
-      queryClient.invalidateQueries({ queryKey: ["fleet-packagings", fleetId] });
-    },
-    onError: (error: any) => {
-      const errorMessage = error?.message || "Erro ao adicionar embalagem. Tente novamente.";
-      toast.error(errorMessage);
-    },
-  });
 
   const handleRemove = useCallback((id: string) => {
     if (window.confirm("Tem certeza que deseja remover este caminhão da frota?")) {
@@ -456,9 +368,11 @@ export default function FleetView() {
       id: (truck as any).id || '',
       plate: truck.plate || '',
       maximumCapacity: truck.maximumCapacity || 0,
-      internalHeight: truck.internalHeight || 0,
-      internalWidth: truck.internalWidth || 0,
-      internalLength: truck.internalLength || 0,
+      internalDimensions: {
+        height: (truck as any).internalHeight || (truck as any).internalDimensions?.height || 0,
+        width: (truck as any).internalWidth || (truck as any).internalDimensions?.width || 0,
+        length: (truck as any).internalLength || (truck as any).internalDimensions?.length || 0
+      },
       type: mappedType,
       status: mappedStatus,
       currentMileage: truck.currentMileage || 0,
@@ -492,10 +406,6 @@ export default function FleetView() {
     }
   }, [filtering]);
 
-  const handlePackagingSubmit = (data: any) => {
-    if (!fleetId) return;
-    addPackagingMutation.mutate({ fleetId, data });
-  };
 
 
   const tableColumns = createTableColumns(
@@ -507,9 +417,6 @@ export default function FleetView() {
     setTrucksCurrentPage(0);
   }, [filtering]);
 
-  useEffect(() => {
-    setPackagingsCurrentPage(0);
-  }, [packagingRefreshKey]);
 
   if (isLoading) {
     return (
@@ -614,189 +521,11 @@ export default function FleetView() {
             </div>
           )}
 
-      <div className="mb-6 mt-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Embalagens da Frota
-          </h2>
-          <Button onClick={() => setShowPackagingForm(true)} size="sm">
-            Adicionar Embalagem
-          </Button>
-        </div>
-        {allPackagings.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {allPackagings.map((packaging: Packaging) => {
-              const packagingLength = Number(packaging.internalLength) || 0;
-              const packagingWidth = Number(packaging.internalWidth) || 0;
-              const packagingHeight = Number(packaging.internalHeight) || 0;
-              const packagingVolumeCm3 = packagingLength * packagingWidth * packagingHeight;
-              const packagingVolumeM3 = packagingVolumeCm3 / 1000000;
-              
-              const productsVolumeCm3 = packaging.products.reduce((sum: number, p: any) => {
-                const product = allProducts?.find((prod) => prod.id === p.productId);
-                if (!product || !product.dimensions) return sum;
-                
-                const productLength = Number(product.dimensions.length) || 0;
-                const productWidth = Number(product.dimensions.width) || 0;
-                const productHeight = Number(product.dimensions.height) || 0;
-                const productVolumeCm3 = productLength * productWidth * productHeight;
-                
-                return sum + (productVolumeCm3 * Number(p.quantity));
-              }, 0);
-              
-              const productsVolumeM3 = productsVolumeCm3 / 1000000;
-              
-              const totalWeight = packaging.products.reduce((sum: number, p: any) => {
-                const product = allProducts?.find((prod) => prod.id === p.productId);
-                if (!product) return sum;
-                return sum + (Number(product.weight) * Number(p.quantity));
-              }, 0);
-
-              return (
-                <div
-                  key={packaging.id}
-                  className="bg-white dark:bg-gray-800 p-4 rounded-lg border shadow-sm"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="font-semibold text-[#4C2D2D] dark:text-white">
-                      {packaging.name}
-                    </h3>
-                    <Badge variant="secondary" className="text-xs">
-                      {packaging.products.length} produto{packaging.products.length !== 1 ? "s" : ""}
-                    </Badge>
-                  </div>
-                  
-                  {packaging.description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                      {packaging.description}
-                    </p>
-                  )}
-
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Dimensões Internas:</span>
-                      <span className="font-medium">
-                        {packagingLength} x {packagingWidth} x {packagingHeight} cm
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Volume da Embalagem:</span>
-                      <span className="font-medium">
-                        {isNaN(packagingVolumeM3) || packagingVolumeM3 <= 0 ? "0.00" : packagingVolumeM3.toFixed(2)} m³
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Volume Ocupado (Produtos):</span>
-                      <span className="font-medium">
-                        {isNaN(productsVolumeM3) || productsVolumeM3 <= 0 ? "0.00" : productsVolumeM3.toFixed(2)} m³
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Peso Total (Produtos):</span>
-                      <span className="font-medium">
-                        {isNaN(totalWeight) || totalWeight <= 0 ? "0.00" : totalWeight.toFixed(2)} kg
-                      </span>
-                    </div>
-                  </div>
-
-                  {packaging.products.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Produtos:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {packaging.products.map((p) => {
-                          const product = allProducts?.find((prod) => prod.id === p.productId);
-                          return (
-                            <span
-                              key={p.productId}
-                              className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded"
-                              title={product?.name || `Produto ID: ${p.productId}`}
-                            >
-                              {product?.name || `ID: ${p.productId}`} (x{p.quantity})
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            </div>
-            {packagingsTotal > 0 && (
-              <div className="mt-4 flex items-center justify-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const newPage = Math.max(0, packagingsCurrentPage - 1);
-                    setPackagingsCurrentPage(newPage);
-                  }}
-                  disabled={!packagingsHasPrevious}
-                  className="px-4"
-                >
-                  Anterior
-                </Button>
-                <span className="text-sm text-[#4C2D2D]">
-                  Página {packagingsCurrentPage + 1} de {packagingsTotalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    if (packagingsTotalPages > 0) {
-                      const newPage = Math.min(packagingsTotalPages - 1, packagingsCurrentPage + 1);
-                      setPackagingsCurrentPage(newPage);
-                    }
-                  }}
-                  disabled={!packagingsHasNext || packagingsTotalPages === 0}
-                  className="px-4"
-                >
-                  Próximo
-                </Button>
-                <div className="flex items-center gap-2 ml-4">
-                  <label htmlFor="packagingsPageSize" className="text-sm text-[#4C2D2D]">
-                    Por página:
-                  </label>
-                  <input
-                    id="packagingsPageSize"
-                    type="number"
-                    min="1"
-                    value={packagingsPageSize}
-                    onChange={(e) => {
-                      const newSize = Math.max(1, parseInt(e.target.value) || 2);
-                      setPackagingsPageSize(newSize);
-                      setPackagingsCurrentPage(0);
-                    }}
-                    className="w-20 p-2 rounded-lg border-2 border-[#CABAAE] bg-[#E5DAD1] text-[#3F2323] text-sm focus:outline-none focus:ring-2 focus:ring-[#744625]"
-                  />
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-lg border text-center">
-            <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-600 dark:text-gray-400">
-              Nenhuma embalagem cadastrada nesta frota.
-            </p>
-          </div>
-        )}
-      </div>
-      
       <TruckMultiSelect
         open={showForm}
         onOpenChange={setShowForm}
         onTrucksSelected={truckMutation.mutate}
       />
-
-      {fleetId && (
-        <PackagingForm
-          open={showPackagingForm}
-          onOpenChange={setShowPackagingForm}
-          onSubmit={handlePackagingSubmit}
-          fleetId={fleetId}
-        />
-      )}
 
       <TruckForm
         open={showTruckEditForm}

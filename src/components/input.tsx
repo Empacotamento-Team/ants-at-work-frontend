@@ -21,6 +21,7 @@ export default function Input({ text, type, id, placeholder, register, error, va
         id={id}
         type={type}
         placeholder={placeholder}
+        step={type === "number" ? "any" : undefined}
          {...(register ? register(id) : {})}
         value = {value}
         onChange = {onChange}

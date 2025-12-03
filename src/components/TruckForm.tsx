@@ -117,6 +117,8 @@ export default function TruckForm({ open, onSubmit, handleOpenChange, editingTru
     queryKey: ["truckModels"],
     queryFn: fetchTruckModels,
     initialData: [],
+    enabled: open, 
+    refetchOnMount: true, 
   });
 
   const selectedModelId = watch("modelId" as any);
@@ -139,9 +141,9 @@ export default function TruckForm({ open, onSubmit, handleOpenChange, editingTru
         const formData = {
           plate: editingTruck.plate || "",
           maximumCapacity: editingTruck.maximumCapacity ?? undefined,
-          internalHeight: editingTruck.internalHeight ?? undefined,
-          internalWidth: editingTruck.internalWidth ?? undefined,
-          internalLength: editingTruck.internalLength ?? undefined,
+          internalHeight: editingTruck.internalDimensions?.height ?? undefined,
+          internalWidth: editingTruck.internalDimensions?.width ?? undefined,
+          internalLength: editingTruck.internalDimensions?.length ?? undefined,
           type: mappedType || "",
           status: mappedStatus || "",
           currentMileage: editingTruck.currentMileage ?? undefined,
@@ -337,13 +339,13 @@ export default function TruckForm({ open, onSubmit, handleOpenChange, editingTru
                 Dimensões Internas
               </p>
               <div className="flex gap-2">
-                <Input
-                  text="Comprimento (m)"
-                  id="internalLength"
+              <Input
+                  text="Altura (m)"
+                  id="internalHeight"
                   type="number"
-                  placeholder="Ex: 14.5"
+                  placeholder="Ex: 3.1"
                   register={register}
-                  error={errors.internalLength?.message}
+                  error={errors.internalHeight?.message}
                 />
                 <Input
                   text="Largura (m)"
@@ -354,12 +356,12 @@ export default function TruckForm({ open, onSubmit, handleOpenChange, editingTru
                   error={errors.internalWidth?.message}
                 />
                 <Input
-                  text="Altura (m)"
-                  id="internalHeight"
+                  text="Comprimento (m)"
+                  id="internalLength"
                   type="number"
-                  placeholder="Ex: 3.1"
+                  placeholder="Ex: 14.5"
                   register={register}
-                  error={errors.internalHeight?.message}
+                  error={errors.internalLength?.message}
                 />
               </div>
               <div className="flex flex-col w-full mt-2">

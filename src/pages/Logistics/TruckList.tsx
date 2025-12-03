@@ -72,11 +72,13 @@ const createTableColumns = (
       );
     },
     accessorFn: (row) => {
-      return (row.internalHeight || 0) * (row.internalLength || 0) * (row.internalWidth || 0);
+      const dims = row.internalDimensions || { height: 0, width: 0, length: 0 };
+      return (dims.height || 0) * (dims.length || 0) * (dims.width || 0);
     },
     cell: ({ row }) => {
       const truck = row.original;
-      return `${truck.internalHeight?.toFixed(2) || "0.00"} x ${truck.internalLength?.toFixed(2) || "0.00"} x ${truck.internalWidth?.toFixed(2) || "0.00"}`;
+      const dims = truck.internalDimensions || { height: 0, width: 0, length: 0 };
+      return `${(dims.height || 0).toFixed(2)} x ${(dims.length || 0).toFixed(2)} x ${(dims.width || 0).toFixed(2)}`;
     },
   },
   {

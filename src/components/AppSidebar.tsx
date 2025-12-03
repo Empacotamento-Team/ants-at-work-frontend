@@ -11,7 +11,7 @@ import {
   SidebarMenuItem
 } from "@components/shadcn-ui/Sidebar";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronUp, FileIcon, Home, LogOut, Truck, User, Package, Layers, Blocks } from "lucide-react";
+import { ChevronUp, FileIcon, Home, LogOut, Truck, User, Package, Layers, Blocks, Package2, ClipboardList } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +38,8 @@ const menuItems = [
       { title: "Frotas", url: "/fleets", icon: Blocks },
       { title: "Produtos", url: "/products", icon: Package },
       { title: "Famílias de Produtos", url: "/product-families", icon: Layers },
+      { title: "Pacotes", url: "/packages", icon: Package2 },
+      { title: "Planejamento", url: "/planning", icon: ClipboardList },
     ],
   },
 ];

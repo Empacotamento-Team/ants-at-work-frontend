@@ -32,10 +32,17 @@ export default function ProductFamilyForm({ open, onSubmit, handleOpenChange, ed
 
   useEffect(() => {
     if (editingFamily) {
+      // Garantir que o nome seja uma string válida
+      const familyName = editingFamily.name ? String(editingFamily.name).trim() : "";
+      const familyDescription = editingFamily.description ? String(editingFamily.description).trim() : "";
+      const familyWeight = editingFamily.defaultMaxSupportedWeight != null 
+        ? Number(editingFamily.defaultMaxSupportedWeight) 
+        : undefined;
+      
       reset({
-        name: editingFamily.name || "",
-        description: editingFamily.description || "",
-        defaultMaxSupportedWeight: editingFamily.defaultMaxSupportedWeight,
+        name: familyName,
+        description: familyDescription,
+        defaultMaxSupportedWeight: familyWeight,
       });
     } else {
       reset({
